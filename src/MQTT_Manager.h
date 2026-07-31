@@ -18,9 +18,10 @@ class MQTT_Manager
     const char *_MQTT_Topic;
     uint16_t _MQTT_size;
     uint16_t _MQTT_keep_alive;
-    bool _MQTT_auto_connect;
+    bool _MQTT_auto_reconnect;
     uint16_t _MQTT_reconnect_interval;
     uint8_t _MQTT_max_reconnect_attempts;
+    bool _auto_reconnect_WiFi;
 
     uint8_t _reconnect_attempts = 0;
     unsigned long _last_time = 0;
@@ -35,9 +36,10 @@ class MQTT_Manager
       const char *topic = "",
       uint16_t size = 256,
       uint16_t keep_alive = 60,
-      bool auto_connect = true,
+      bool auto_reconnect = true,
       uint16_t reconnect_interval = 5000,
-      uint8_t max_reconnect_attempts = 5
+      uint8_t max_reconnect_attempts = 5,
+      bool auto_reconnect_wifi = true
     );
 
     void begin();

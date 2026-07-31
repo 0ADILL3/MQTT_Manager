@@ -9,9 +9,10 @@ MQTT_Manager::MQTT_Manager(
   const char *topic,
   uint16_t size,
   uint16_t keep_alive,
-  bool auto_connect,
+  bool auto_reconnect,
   uint16_t reconnect_interval,
-  uint8_t max_reconnect_attempts
+  uint8_t max_reconnect_attempts,
+  bool auto_reconnect_wifi
 ) :
   _MQTT_Server(server),
   _MQTT_Port(port),
@@ -21,9 +22,10 @@ MQTT_Manager::MQTT_Manager(
   _MQTT_Topic(topic),
   _MQTT_size(size),
   _MQTT_keep_alive(keep_alive),
-  _MQTT_auto_connect(auto_connect),
+  _MQTT_auto_reconnect(auto_reconnect),
   _MQTT_reconnect_interval(reconnect_interval),
-  _MQTT_max_reconnect_attempts(max_reconnect_attempts)
+  _MQTT_max_reconnect_attempts(max_reconnect_attempts),
+  _auto_reconnect_WiFi(auto_reconnect_wifi)
 {}
 
 void MQTT_Manager::begin()
@@ -42,48 +44,54 @@ boolean MQTT_Manager::publish(const char *topic, const uint8_t *payload, size_t 
 boolean MQTT_Manager::publish(const char *topic, const char *payload, size_t plength) {return _MQTT_Client.publish(topic, (const uint8_t*)payload, (unsigned int)plength);}
 
 void MQTT_Manager::connect()
-{
+{ 
   if (is_connected()) {return;}
-  
-  if (WiFi.status() != WL_CONNECTED)
+
+  if (_auto_reconnect_WiFi)
   {
-    _reconnect_attempts++;
-    Serial.printf("\nReconnecting...(%d attempt)\n", _reconnect_attempts);
-    WiFi.reconnect();
-    if (_MQTT_max_reconnect_attempts > 0 && _reconnect_attempts >= _MQTT_max_reconnect_attempts)
+    if (WiFi.status() != WL_CONNECTED)
     {
-      _reconnect_attempts = 0;
-      Serial.println();
-      Serial.println("Reconnecting timeout, Restarting...");
-      Serial.println();
-      ESP.restart();
+      _reconnect_attempts++;
+      Serial.printf("\n[MQTT_Manager] Reconnecting...(%d attempt)\n", _reconnect_attempts);
+      WiFi.reconnect();
+      if (_MQTT_max_reconnect_attempts > 0 and _reconnect_attempts >= _MQTT_max_reconnect_attempts)
+      {
+        _reconnect_attempts = 0;
+        Serial.println();
+        Serial.println("[MQTT_Manager] Reconnecting timeout, Restarting...");
+        Serial.println();
+        ESP.restart();
+      }
+      return;
     }
-    return;
+    else {_reconnect_attempts = 0;}
   }
-  else {_reconnect_attempts = 0;}
   
-  Serial.println();
-  Serial.print("Connecting to MQTT...");
-  
-  if (_MQTT_Client.connect(_MQTT_Client_ID, _MQTT_Username, _MQTT_Password))
+  if (_MQTT_auto_reconnect)
   {
-    Serial.println("OK");
-    if (strcmp(_MQTT_Topic, "") != 0)
+    Serial.println();
+    Serial.print("[MQTT_Manager] Connecting to MQTT...");
+    
+    if (_MQTT_Client.connect(_MQTT_Client_ID, _MQTT_Username, _MQTT_Password))
     {
-      Serial.println();
-      Serial.printf("Subscribe to topic: %s\n", _MQTT_Topic);
-      _MQTT_Client.subscribe((String(_MQTT_Topic)+"/#").c_str());
+      Serial.println("OK");
+      if (strcmp(_MQTT_Topic, "") != 0)
+      {
+        Serial.println();
+        Serial.printf("[MQTT_Manager] Subscribe to topic: %s\n", _MQTT_Topic);
+        _MQTT_Client.subscribe((String(_MQTT_Topic)+"/#").c_str());
+      }
     }
-  }
-  else
-  {
-    Serial.printf("Failed. rc=%d\n", _MQTT_Client.state());
+    else
+    {
+      Serial.printf("Failed. rc=%d\n", _MQTT_Client.state());
+    }
   }
 }
 
 void MQTT_Manager::loop_start()
 {
-  if ((millis() - _last_time > _MQTT_reconnect_interval) and _MQTT_auto_connect) {connect(); _last_time = millis();}
+  if (!is_connected() and (millis() - _last_time > _MQTT_reconnect_interval) and _MQTT_auto_reconnect) {connect(); _last_time = millis();}
   _MQTT_Client.loop();
 }
 
