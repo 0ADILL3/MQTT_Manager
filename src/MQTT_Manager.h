@@ -27,6 +27,7 @@ class MQTT_Manager
     unsigned long _last_time = 0;
   
   public:
+   // Initialize MQTT connection parameters
     MQTT_Manager(
       const char *server,
       uint16_t port,
@@ -42,17 +43,26 @@ class MQTT_Manager
       bool auto_reconnect_wifi = true
     );
 
+    // Initialize MQTT client
     void begin();
+    // Set MQTT message callback
     void set_callback(MQTT_CALLBACK_SIGNATURE);
     
+    // Publish message to MQTT topic
     boolean publish(const char *topic, const char *payload);
+    // Publish message to MQTT topic
     boolean publish(const char *topic, const uint8_t *payload, size_t plength);
+    // Publish message to MQTT topic
     boolean publish(const char *topic, const char *payload, size_t plength);
     
+    // Connect to MQTT broker
     void connect();
+    // Handle MQTT loop and auto reconnect
     void loop_start();
 
+    // Check MQTT connection status
     boolean is_connected();
+    // Get MQTT client instance
     PubSubClient &get_client();
 };
 
