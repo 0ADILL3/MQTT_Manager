@@ -1,6 +1,8 @@
 #include "MQTT_Manager.h"
 
-MQTT_Manager::MQTT_Manager(
+MQTT_Manager::MQTT_Manager() {}
+
+void MQTT_Manager::begin(
   const char *server,
   uint16_t port,
   const char *username, 
@@ -9,54 +11,68 @@ MQTT_Manager::MQTT_Manager(
   const char *topic,
   uint16_t size,
   uint16_t keep_alive,
-  bool auto_reconnect,
+  bool auto_reconnect_server,
+  bool auto_reconnect_wifi,
   uint16_t reconnect_interval,
   uint8_t max_reconnect_attempts,
-  bool auto_reconnect_wifi
-) :
-  _MQTT_Server(server),
-  _MQTT_Port(port),
-  _MQTT_Username(username),
-  _MQTT_Password(password),
-  _MQTT_Client_ID(client_id),
-  _MQTT_Topic(topic),
-  _MQTT_size(size),
-  _MQTT_keep_alive(keep_alive),
-  _MQTT_auto_reconnect(auto_reconnect),
-  _MQTT_reconnect_interval(reconnect_interval),
-  _MQTT_max_reconnect_attempts(max_reconnect_attempts),
-  _auto_reconnect_WiFi(auto_reconnect_wifi)
-{}
-
-void MQTT_Manager::begin()
+  const char *will_topic,
+  const char *will_message,
+  uint8_t will_qos,
+  bool will_retain
+)
 {
-  _MQTT_Client.setClient(_WiFi_Client);
+  server_ = server;
+  port_ = port;
+  username_ = username;
+  password_ = password;
+  client_id_ = client_id;
+  topic_ = topic;
+  size_ = size;
+  keep_alive_ = keep_alive;
+  auto_reconnect_server_ = auto_reconnect_server;
+  auto_reconnect_wifi_ = auto_reconnect_wifi;
+  reconnect_interval_ = reconnect_interval;
+  max_reconnect_attempts_ = max_reconnect_attempts;
+  will_topic_ = will_topic;
+  will_message_ = will_message;
+  will_qos_ = will_qos;
+  will_retain_ = will_retain;
 
-  _MQTT_Client.setServer(_MQTT_Server, _MQTT_Port);
-  if (_MQTT_keep_alive != 60) {_MQTT_Client.setKeepAlive(_MQTT_keep_alive);}
-  if (_MQTT_size != 256) {_MQTT_Client.setBufferSize(_MQTT_size);}
+  is_initialized_ = true;
+  
+  MQTT_Client_.setClient(WiFi_Client_);
+
+  MQTT_Client_.setServer(server_, port_);
+  if (keep_alive_ != 60) {MQTT_Client_.setKeepAlive(keep_alive_);}
+  if (size_ != 256) {MQTT_Client_.setBufferSize(size_);}
 }
 
-void MQTT_Manager::set_callback(MQTT_CALLBACK_SIGNATURE) {_MQTT_Client.setCallback(callback);}
+void MQTT_Manager::set_callback(MQTT_CALLBACK_SIGNATURE) {MQTT_Client_.setCallback(callback);}
 
-boolean MQTT_Manager::publish(const char *topic, const char *payload) {return _MQTT_Client.publish(topic, payload);}
-boolean MQTT_Manager::publish(const char *topic, const uint8_t *payload, size_t plength) {return _MQTT_Client.publish(topic, payload, (unsigned int)plength);}
-boolean MQTT_Manager::publish(const char *topic, const char *payload, size_t plength) {return _MQTT_Client.publish(topic, (const uint8_t*)payload, (unsigned int)plength);}
+void MQTT_Manager::set_on_connect_subscribe_callback(void (*subscribe_callback)()) {on_connect_subscribe_callback_ = subscribe_callback;}
+
+boolean MQTT_Manager::publish(const char *topic, const char *payload) {return MQTT_Client_.publish(topic, payload);}
+boolean MQTT_Manager::publish(const char *topic, const uint8_t *payload, size_t plength) {return MQTT_Client_.publish(topic, payload, (unsigned int)plength);}
+boolean MQTT_Manager::publish(const char *topic, const char *payload, size_t plength) {return MQTT_Client_.publish(topic, (const uint8_t*)payload, (unsigned int)plength);}
+
+boolean MQTT_Manager::subscribe(const char *topic) {return MQTT_Client_.subscribe(topic);}
+boolean MQTT_Manager::subscribe(const char *topic, uint8_t qos) {return MQTT_Client_.subscribe(topic, qos);}
 
 void MQTT_Manager::connect()
 { 
+  if (!is_initialized_) {return;}
   if (is_connected()) {return;}
 
-  if (_auto_reconnect_WiFi)
+  if (auto_reconnect_wifi_)
   {
     if (WiFi.status() != WL_CONNECTED)
     {
-      _reconnect_attempts++;
-      Serial.printf("\n[MQTT_Manager] Reconnecting...(%d attempt)\n", _reconnect_attempts);
+      reconnect_attempts_++;
+      Serial.printf("\n[MQTT_Manager] Reconnecting...(%d attempt)\n", reconnect_attempts_);
       WiFi.reconnect();
-      if (_MQTT_max_reconnect_attempts > 0 and _reconnect_attempts >= _MQTT_max_reconnect_attempts)
+      if (max_reconnect_attempts_ > 0 && reconnect_attempts_ >= max_reconnect_attempts_)
       {
-        _reconnect_attempts = 0;
+        reconnect_attempts_ = 0;
         Serial.println();
         Serial.println("[MQTT_Manager] Reconnecting timeout, Restarting...");
         Serial.println();
@@ -64,37 +80,53 @@ void MQTT_Manager::connect()
       }
       return;
     }
-    else {_reconnect_attempts = 0;}
+    else {reconnect_attempts_ = 0;}
   }
   
-  if (_MQTT_auto_reconnect)
+  if (auto_reconnect_server_)
   {
     Serial.println();
     Serial.print("[MQTT_Manager] Connecting to MQTT...");
+
+    bool client_connected = false;
+
+    if (strcmp(will_topic_, "") != 0) {client_connected = MQTT_Client_.connect(client_id_, username_, password_, will_topic_, will_qos_, will_retain_, will_message_);} 
+    else {client_connected = MQTT_Client_.connect(client_id_, username_, password_);}
     
-    if (_MQTT_Client.connect(_MQTT_Client_ID, _MQTT_Username, _MQTT_Password))
+    if (client_connected)
     {
       Serial.println("OK");
-      if (strcmp(_MQTT_Topic, "") != 0)
+
+      if (strcmp(will_topic_, "") != 0) {MQTT_Client_.publish(will_topic_, "online", will_retain_);}
+      
+      if (strcmp(topic_, "") != 0)
       {
         Serial.println();
-        Serial.printf("[MQTT_Manager] Subscribe to topic: %s\n", _MQTT_Topic);
-        _MQTT_Client.subscribe((String(_MQTT_Topic)+"/#").c_str());
+        Serial.printf("[MQTT_Manager] Subscribe to topic: %s\n", topic_);
+        MQTT_Client_.subscribe(topic_);
+      }
+
+      if (on_connect_subscribe_callback_ != nullptr)
+      {
+        Serial.println("[MQTT_Manager] Executing user subscribe list...");
+        on_connect_subscribe_callback_();
       }
     }
     else
     {
-      Serial.printf("Failed. rc=%d\n", _MQTT_Client.state());
+      Serial.printf("Failed. rc=%d\n", MQTT_Client_.state());
     }
   }
 }
 
 void MQTT_Manager::loop_start()
 {
-  if (!is_connected() and (millis() - _last_time > _MQTT_reconnect_interval) and _MQTT_auto_reconnect) {connect(); _last_time = millis();}
-  _MQTT_Client.loop();
+  if (!is_initialized_) {Serial.println("[MQTT_Manager] MQTT_Manager is not initialized, please call begin() first."); return;}
+
+  if (!is_connected() && (millis() - last_time_ > reconnect_interval_) && auto_reconnect_server_) {connect(); last_time_ = millis();}
+  MQTT_Client_.loop();
 }
 
-boolean MQTT_Manager::is_connected() {return _MQTT_Client.connected();}
+boolean MQTT_Manager::is_connected() {return MQTT_Client_.connected();}
 
-PubSubClient &MQTT_Manager::get_client() {return _MQTT_Client;}
+PubSubClient &MQTT_Manager::get_client() {return MQTT_Client_;}
