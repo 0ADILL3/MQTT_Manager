@@ -12,8 +12,9 @@ const char* MQTT_USER = "";
 const char* MQTT_PASS = "";
 const char* CLIENT_ID = "ESP32_Client_Demo_123";
 
+WiFiClient client;
 // Inisialisasi Objek MQTT_Manager
-MQTT_Manager mqtt;
+MQTT_Manager mqtt(client);
 
 // Variabel untuk non-blocking publish
 unsigned long last_publish = 0;
@@ -60,12 +61,12 @@ void setup() {
     MQTT_PASS, 
     CLIENT_ID, 
     "",                 // default base topic kosong
-    256,                // ukuran buffer
-    60,                 // keep alive (detik)
     true,               // auto reconnect server
     true,               // auto reconnect wifi
     5000,               // interval reconnect (ms)
     0,                  // max attempts (0 = no force restart)
+    256,                // ukuran buffer
+    60,                 // keep alive (detik)
     "rumah/status/esp", // Will Topic (LWT)
     "offline",          // Will Message
     0,                  // Will QoS
@@ -73,7 +74,7 @@ void setup() {
   );
 
   // Daftarkan callback untuk pesan masuk
-  mqtt.set_callback(on_message_received);
+  mqtt.set_on_message_callback(on_message_received);
 
   // Daftarkan callback untuk daftar subscribe
   mqtt.set_on_connect_subscribe_callback(my_subscription_list);

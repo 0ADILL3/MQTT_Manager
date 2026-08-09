@@ -24,7 +24,7 @@ Library ini diciptakan untuk memecahkan masalah umum pada perangkat IoT, yaitu m
 * `void begin(...)` : Fungsi inisialisasi utama. Memiliki parameter yang sangat lengkap (Broker, Kredensial, Timeout, Interval Reconnect, LWT, dll).
 **Catatan Penting Parameter `topic`**: Parameter keenam pada fungsi `begin()` (yaitu `topic`) didesain sebagai **Base Topic** (Topik Dasar). Jika Anda mengisi parameter ini (tidak dikosongkan `""`), library akan secara otomatis melakukan *subscribe* ke Base Topic tersebut setiap kali perangkat berhasil terkoneksi ke broker MQTT. Ini sangat berguna jika perangkat Anda memiliki satu topik kendali utama.
 * `void loop_start()` : Wajib dipanggil di dalam `void loop()`. Menangani siklus komunikasi `PubSubClient` dan logika *auto-reconnect*.
-* `void set_callback(MQTT_CALLBACK_SIGNATURE)` : Meneruskan pesan masuk ke fungsi buatan *user*.
+* `void set_on_message_callback(MQTT_CALLBACK_SIGNATURE)` : Meneruskan pesan masuk ke fungsi buatan *user*.
 * `void set_on_connect_subscribe_callback(void (*callback)())` : Mendaftarkan fungsi berisi daftar *subscribe* (seperti `mqtt.subscribe()`). Fungsi ini akan dieksekusi **setelah** koneksi dan Base Topic berhasil di-*subscribe*.
 * `boolean publish(topic, payload)` : Mempublikasikan pesan.
 * `boolean subscribe(topic, [qos])` : Berlangganan ke topik tambahan tertentu.
@@ -38,7 +38,8 @@ Library ini diciptakan untuk memecahkan masalah umum pada perangkat IoT, yaitu m
 #include <WiFi.h>
 #include "MQTT_Manager.h"
 
-MQTT_Manager mqtt;
+WiFiClient client;
+MQTT_Manager mqtt(client);
 
 // 1. Buat daftar topik yang ingin didengarkan
 void my_subscriptions() {
@@ -57,7 +58,7 @@ void setup() {
   mqtt.begin("broker.hivemq.com", 1883, "", "", "ESP32_Client_01");
   
   // Daftarkan fungsi-fungsi ke library
-  mqtt.set_callback(mqtt_callback);
+  mqtt.set_on_message_callback(mqtt_callback);
   mqtt.set_on_connect_subscribe_callback(my_subscriptions);
 }
 

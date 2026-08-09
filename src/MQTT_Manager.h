@@ -2,12 +2,12 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
+#include <Client.h>
 #include <PubSubClient.h>
 
 class MQTT_Manager
 {
   private:
-    WiFiClient WiFi_Client_;
     PubSubClient MQTT_Client_;
 
     const char *server_;
@@ -16,12 +16,12 @@ class MQTT_Manager
     const char *password_;
     const char *client_id_;
     const char *topic_;
-    uint16_t size_;
-    uint16_t keep_alive_;
     bool auto_reconnect_server_;
     bool auto_reconnect_wifi_;
     uint16_t reconnect_interval_;
     uint8_t max_reconnect_attempts_;
+    uint16_t size_;
+    uint16_t keep_alive_;
     const char *will_topic_;
     const char *will_message_;
     uint8_t will_qos_;
@@ -34,8 +34,8 @@ class MQTT_Manager
     void (*on_connect_subscribe_callback_)() = nullptr;
   
   public:
-   // Constructor
-    MQTT_Manager();
+   // Initialize Network Client for MQTT
+    MQTT_Manager(Client &network_client);
 
     // Initialize MQTT connection parameters
     void begin(
@@ -45,19 +45,19 @@ class MQTT_Manager
       const char *password,
       const char *client_id, 
       const char *topic = "",
-      uint16_t size = 256,
-      uint16_t keep_alive = 60,
       bool auto_reconnect_server = true,
       bool auto_reconnect_wifi = true,
       uint16_t reconnect_interval = 5000,
       uint8_t max_reconnect_attempts = 0,
+      uint16_t size = 256,
+      uint16_t keep_alive = 60,
       const char *will_topic = "",
       const char *will_message = "offline",
       uint8_t will_qos = 0,
       bool will_retain = true
     );
     // Set MQTT message callback
-    void set_callback(MQTT_CALLBACK_SIGNATURE);
+    void set_on_message_callback(MQTT_CALLBACK_SIGNATURE);
     // Set callback function to execute user subscription lists after successful connection
     void set_on_connect_subscribe_callback(void (*subscribe_callback)());
     
@@ -73,8 +73,8 @@ class MQTT_Manager
     // Subscribe to MQTT topic with QoS
     boolean subscribe(const char *topic, uint8_t qos);
 
-    // Connect to MQTT broker
-    void connect();
+    // Reconnect to MQTT broker and WiFi
+    void reconnect();
     // Handle MQTT loop and auto reconnect
     void loop_start();
 
@@ -84,4 +84,6 @@ class MQTT_Manager
     PubSubClient &get_client();
 };
 
-void MQTT_publish();
+void MQTT_Publish();
+void MQTT_Subscribe();
+void MQTT_Callback(char* topic, byte* payload, unsigned int length);
