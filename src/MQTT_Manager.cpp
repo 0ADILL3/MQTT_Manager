@@ -70,14 +70,12 @@ void MQTT_Manager::reconnect()
       if (WiFi.status() != WL_CONNECTED)
       {
         reconnect_attempts_++;
-        Serial.printf("\n[MQTT_Manager] Reconnecting...(%d attempt)\n", reconnect_attempts_);
+        MQTT_MANAGER_LOG_F("Reconnecting...(%d attempt)\n", reconnect_attempts_);
         WiFi.reconnect();
         if (max_reconnect_attempts_ > 0 && reconnect_attempts_ >= max_reconnect_attempts_)
         {
           reconnect_attempts_ = 0;
-          Serial.println();
-          Serial.println("[MQTT_Manager] Reconnecting timeout, Restarting...");
-          Serial.println();
+          MQTT_MANAGER_LOG_F("Reconnecting timeout, Restarting...\n\n");
           ESP.restart();
         }
         return;
@@ -87,8 +85,7 @@ void MQTT_Manager::reconnect()
     
     if (auto_reconnect_server_)
     {
-      Serial.println();
-      Serial.print("[MQTT_Manager] Connecting to MQTT...");
+      MQTT_MANAGER_LOG_F("Connecting to MQTT...");
 
       bool client_connected = false;
 
@@ -97,26 +94,26 @@ void MQTT_Manager::reconnect()
       
       if (client_connected)
       {
-        Serial.println("OK");
+        MQTT_MANAGER_LOG("OK");
 
         if (strcmp(will_topic_, "") != 0) {MQTT_Client_.publish(will_topic_, "online", will_retain_);}
         
         if (strcmp(topic_, "") != 0)
         {
-          Serial.println();
-          Serial.printf("[MQTT_Manager] Subscribe to topic: %s\n", topic_);
+          MQTT_MANAGER_LOG_F("Subscribe to topic: %s\n", topic_);
           MQTT_Client_.subscribe(topic_);
         }
 
         if (on_connect_subscribe_callback_ != nullptr)
         {
-          Serial.println("[MQTT_Manager] Executing user subscribe list...");
+          MQTT_MANAGER_LOG_F("Executing user subscribe list...\n");
           on_connect_subscribe_callback_();
         }
       }
       else
       {
-        Serial.printf("Failed. rc=%d\n", MQTT_Client_.state());
+        MQTT_MANAGER_LOG("Failed. rc=");
+        MQTT_MANAGER_LOG_LN(MQTT_Client_.state());
       }
     }
   }
@@ -124,7 +121,7 @@ void MQTT_Manager::reconnect()
 
 void MQTT_Manager::loop_start()
 {
-  if (!is_initialized_) {Serial.println("[MQTT_Manager] MQTT_Manager is not initialized, please call begin() first."); return;}
+  if (!is_initialized_) {MQTT_MANAGER_LOG("MQTT_Manager is not initialized, please call begin() first.\n"); return;}
 
   reconnect();
   MQTT_Client_.loop();
