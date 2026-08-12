@@ -70,7 +70,7 @@ void MQTT_Manager::reconnect()
       if (WiFi.status() != WL_CONNECTED)
       {
         reconnect_attempts_++;
-        MQTT_MANAGER_LOG_F("Reconnecting...(%d attempt)\n", reconnect_attempts_);
+        MQTT_MANAGER_LOG_F("Reconnecting...(%d attempt)", reconnect_attempts_);
         WiFi.reconnect();
         if (max_reconnect_attempts_ > 0 && reconnect_attempts_ >= max_reconnect_attempts_)
         {
@@ -121,7 +121,7 @@ void MQTT_Manager::reconnect()
 
 void MQTT_Manager::loop_start()
 {
-  if (!is_initialized_) {MQTT_MANAGER_LOG("MQTT_Manager is not initialized, please call begin() first.\n"); return;}
+  if (!is_initialized_) {MQTT_MANAGER_LOG_F("MQTT_Manager is not initialized, please call begin() first.\n"); return;}
 
   reconnect();
   MQTT_Client_.loop();

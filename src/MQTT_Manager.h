@@ -9,12 +9,12 @@
 
 #if DEBUG_MQTT_MANAGER
   #define MQTT_MANAGER_LOG(x) do {Serial.print(x)} while (0)
-  #define MQTT_MANAGER_LOG_LN(x) do {Serial.println(x)} while (0)
   #define MQTT_MANAGER_LOG_F(fmt, ...) do {Serial.printf("\n[MQTT_Manager] " fmt, ##__VA_ARGS__);} while (0)
+  #define MQTT_MANAGER_LOG_LN(x) do {Serial.println(x)} while (0)
 #else
   #define MQTT_MANAGER_LOG(...) do {} while (0)
-  #define MQTT_MANAGER_LOG_LN(...) do {} while (0)
   #define MQTT_MANAGER_LOG_F(...) do {} while (0)
+  #define MQTT_MANAGER_LOG_LN(...) do {} while (0)
 #endif
 
 class MQTT_Manager
