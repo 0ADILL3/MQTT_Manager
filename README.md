@@ -1,4 +1,4 @@
-# MQTT Manager Library
+# MQTT Manager
 
 MQTT Manager adalah library C++ (wrapper) ringan dan elegan untuk ESP32/ESP8266 yang menyederhanakan penggunaan library `PubSubClient`. 
 

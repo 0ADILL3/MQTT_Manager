@@ -5,9 +5,9 @@
 #include <Client.h>
 #include <PubSubClient.h>
 
-#define DEBUG_MQTT_MANAGER 1
+#define MQTT_MANAGER_DEBUG 1
 
-#if DEBUG_MQTT_MANAGER
+#if MQTT_MANAGER_DEBUG
   #define MQTT_MANAGER_LOG(x) do {Serial.print(x)} while (0)
   #define MQTT_MANAGER_LOG_F(fmt, ...) do {Serial.printf("\n[MQTT_Manager] " fmt, ##__VA_ARGS__);} while (0)
   #define MQTT_MANAGER_LOG_LN(x) do {Serial.println(x)} while (0)
@@ -17,6 +17,18 @@
   #define MQTT_MANAGER_LOG_LN(...) do {} while (0)
 #endif
 
+/**
+ * @brief Kelas wrapper untuk menyederhanakan manajemen koneksi dan operasi MQTT (PubSubClient) serta memonitor koneksi jaringan (WiFi).
+ * 
+ * Kelas ini bertindak sebagai manajer tingkat tinggi (high-level manager) yang membungkus fungsi-fungsi 
+ * library `PubSubClient` untuk platform ESP. Fungsinya mencakup inisialisasi koneksi, penanganan 
+ * koneksi ulang (auto-reconnect) secara non-blocking baik untuk WiFi maupun broker MQTT, 
+ * manajemen Last Will and Testament (LWT), dan re-registrasi langganan topik (subscriptions) secara 
+ * otomatis saat terjadi pemutusan jaringan.
+ * 
+ * Sistem pemulihan koneksi dirancang berjalan asinkron menggunakan pola pemeriksaan waktu non-blocking 
+ * di latar belakang, yang mencegah *stalling* pada eksekusi `loop()` utama ketika koneksi terputus.
+ */
 class MQTT_Manager
 {
   private:
